@@ -2,3 +2,5 @@ node_modules/
 dist/
 *.log
 /.expo
+.env
+.env.local

@@ -40,6 +40,21 @@ npm run web
 - The marketplace data is hardcoded and local only.
 - Negotiation behavior is deterministic mock logic, not a live agent network.
 - The details screen is currently a stub.
+- Supabase is wired through `services/supabase.ts` and expects `EXPO_PUBLIC_SUPABASE_URL` plus `EXPO_PUBLIC_SUPABASE_KEY`.
+
+## Supabase Setup
+
+Copy `.env.example` to your local environment file and set the public Supabase values there.
+
+```bash
+cp .env.example .env
+```
+
+The shared client lives in `services/supabase.ts` and can be imported anywhere in the app:
+
+```ts
+import { supabase } from '../services/supabase'
+```
 
 ## Optional Smoke Test
 
