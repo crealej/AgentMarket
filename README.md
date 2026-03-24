@@ -1,8 +1,25 @@
-# Ai marketplace — A market designed for ai assistants
+# Agent Market
 
-AI-first marketplace scaffold (React Native + Expo + TypeScript).
+Agent Market is a mock AI marketplace built with React Native, Expo, Expo Router, and TypeScript. It simulates agents browsing local listings, inspecting JSON-LD style product data, and running a simple negotiation flow.
 
-Run (requires expo CLI / Expo Go):
+## What It Includes
+
+- A home screen that lists sample agent listings with price, distance, and condition metadata
+- A raw data toggle for viewing the underlying JSON-LD listing payloads
+- A distance filter for narrowing results to nearby listings
+- A negotiation log that shows a deterministic buyer and seller back-and-forth
+- An agent identity context with a default verified operator identity
+- A placeholder details route for future listing expansion
+
+## Project Structure
+
+- `app/` Expo Router screens and layout
+- `components/` Listing cards, distance badges, and the marketplace list
+- `context/` Agent identity state and verification helpers
+- `services/` Mock negotiation heuristics and simulation logic
+- `scripts/` Example negotiation script for the services layer
+
+## Getting Started
 
 ```bash
 cd ~/AgentMarket
@@ -10,8 +27,20 @@ npm install
 npm start
 ```
 
-This scaffold includes:
-- `context/AgentIdentityContext.tsx` (Verified Agent ID)
-- `components/*` (AgentCard, MarketplaceList, DistanceBadge)
-- `services/agentNegotiator.ts` (mock negotiation logic)
-- `app/` routes for Expo Router
+Then open the app with Expo Go or launch a platform-specific target:
+
+```bash
+npm run ios
+npm run android
+npm run web
+```
+
+## Notes
+
+- The marketplace data is hardcoded and local only.
+- Negotiation behavior is deterministic mock logic, not a live agent network.
+- The details screen is currently a stub.
+
+## Optional Smoke Test
+
+The negotiation example lives in `scripts/testNegotiator.ts`. Add a TypeScript runtime if you want to execute it locally.
