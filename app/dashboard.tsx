@@ -5,7 +5,8 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
-  Image,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native'
 import { Link } from 'expo-router'
 import { supabase } from '../services/supabase'
@@ -37,12 +38,21 @@ export default function DashboardScreen() {
   const [userListings, setUserListings] = useState<UserListing[]>([])
   const [messages, setMessages] = useState<MessageSummary>({ total: 0, unread: 0, spam: 0 })
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
     fetchDashboardData()
   }, [])
 
+  const onRefresh = async () => {
+    setRefreshing(true)
+    await fetchDashboardData()
+    setRefreshing(false)
+  }
+
   async function fetchDashboardData() {
+    setLoading(true)
+    
     if (!supabase) {
       // Mock data for demo
       setLinkedAgents([

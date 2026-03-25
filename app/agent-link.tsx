@@ -7,16 +7,20 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native'
-import { Link } from 'expo-router'
+import { Link, useRouter } from 'expo-router'
 import { supabase } from '../services/supabase'
 
 export default function AgentLinkScreen() {
+  const router = useRouter()
   const [step, setStep] = useState(1)
   const [agentName, setAgentName] = useState('')
   const [generatedId, setGeneratedId] = useState('')
   const [generatedToken, setGeneratedToken] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const generateAgentId = () => {
     const timestamp = Date.now().toString(36)
@@ -31,62 +35,96 @@ export default function AgentLinkScreen() {
       .substring(0, 32)
   }
 
+  const validateAgentName = (name: string): string | null => {
+    if (!name.trim()) return 'Please enter an agent name'
+    if (name.length < 2) return 'Name must be at least 2 characters'
+    if (name.length > 30) return 'Name must be less than 30 characters'
+    if (!/^[a-zA-Z0-9\s-]+$/.test(name)) return 'Only letters, numbers, and hyphens allowed'
+    return null
+  }
+
   const handleGenerate = async () => {
-    if (!agentName.trim()) {
-      Alert.alert('Error', 'Please enter an agent name')
+    const validationError = validateAgentName(agentName)
+    if (validationError) {
+      setError(validationError)
       return
     }
 
     setLoading(true)
+    setError(null)
 
     const agentId = generateAgentId()
     const token = generateToken()
-
-    // In production, this would be hashed server-side
     const tokenHash = `hash_${token.substring(0, 16)}`
 
-    if (supabase) {
-      // Create human user if needed (simplified)
-      const { data: existingUser } = await supabase
-        .from('human_users')
-        .select('id')
-        .eq('username', 'default_user')
-        .single()
-
-      let humanId = existingUser?.id
-
-      if (!humanId) {
-        const { data: newUser } = await supabase
+    try {
+      if (supabase) {
+        // Create human user if needed (simplified)
+        const { data: existingUser } = await supabase
           .from('human_users')
-          .insert({ username: 'default_user', email: 'user@agentmarket.com', password_hash: 'demo' })
-          .select()
+          .select('id')
+          .eq('username', 'default_user')
           .single()
-        humanId = newUser?.id
+
+        let humanId = existingUser?.id
+
+        if (!humanId) {
+          const { data: newUser } = await supabase
+            .from('human_users')
+            .insert({ username: 'default_user', email: 'user@agentmarket.com', password_hash: 'demo' })
+            .select()
+            .single()
+          humanId = newUser?.id
+        }
+
+        // Check if agent_id already exists
+        const { data: existingAgent } = await supabase
+          .from('agent_tokens')
+          .select('id')
+          .eq('agent_id', agentId)
+          .single()
+
+        if (existingAgent) {
+          setError('This agent name is already taken. Please choose another.')
+          setLoading(false)
+          return
+        }
+
+        // Create agent token
+        const { error: insertError } = await supabase.from('agent_tokens').insert({
+          human_user_id: humanId,
+          agent_name: agentName,
+          agent_id: agentId,
+          token_hash: tokenHash,
+          verified: false,
+        })
+
+        if (insertError) throw insertError
       }
 
-      // Create agent token
-      await supabase.from('agent_tokens').insert({
-        human_user_id: humanId,
-        agent_name: agentName,
-        agent_id: agentId,
-        token_hash: tokenHash,
-        verified: false,
-      })
+      setGeneratedId(agentId)
+      setGeneratedToken(token)
+      setStep(2)
+    } catch (err) {
+      setError('Failed to create agent. Please try again.')
+    } finally {
+      setLoading(false)
     }
+  }
 
-    setGeneratedId(agentId)
-    setGeneratedToken(token)
-    setStep(2)
-    setLoading(false)
+  const handleCopyToken = async () => {
+    // In production, use clipboard API
+    try {
+      await navigator.clipboard.writeText(generatedToken)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      Alert.alert('Token', generatedToken)
+    }
   }
 
   const handleConfirm = () => {
     setStep(3)
-  }
-
-  const handleCopyToken = () => {
-    // In production, use clipboard API
-    Alert.alert('Token Copied', 'Give this token to your AI assistant')
   }
 
   return (
@@ -115,22 +153,31 @@ export default function AgentLinkScreen() {
           </Text>
 
           <TextInput
-            style={styles.input}
+            style={[styles.input, error && styles.inputError]}
             placeholder="e.g., Claw, Assistant, Bot..."
             placeholderTextColor="#45474b"
             value={agentName}
-            onChangeText={setAgentName}
+            onChangeText={(text) => {
+              setAgentName(text)
+              setError(null)
+            }}
             autoCapitalize="words"
+            maxLength={30}
           />
+
+          {error && <Text style={styles.errorText}>{error}</Text>}
+          <Text style={styles.charCount}>{agentName.length}/30</Text>
 
           <Pressable
             style={[styles.primaryBtn, loading && styles.btnDisabled]}
             onPress={handleGenerate}
             disabled={loading}
           >
-            <Text style={styles.primaryBtnText}>
-              {loading ? 'GENERATING...' : 'GENERATE CREDENTIALS'}
-            </Text>
+            {loading ? (
+              <ActivityIndicator color="#002f65" />
+            ) : (
+              <Text style={styles.primaryBtnText}>GENERATE CREDENTIALS</Text>
+            )}
           </Pressable>
         </View>
       )}
@@ -157,8 +204,13 @@ export default function AgentLinkScreen() {
             ⚠️ Copy the token now. You won't see it again.
           </Text>
 
-          <Pressable style={styles.primaryBtn} onPress={handleCopyToken}>
-            <Text style={styles.primaryBtnText}>COPY TOKEN</Text>
+          <Pressable
+            style={[styles.primaryBtn, copied && styles.copiedBtn]}
+            onPress={handleCopyToken}
+          >
+            <Text style={styles.primaryBtnText}>
+              {copied ? '✓ COPIED!' : 'COPY TOKEN'}
+            </Text>
           </Pressable>
 
           <Pressable style={styles.secondaryBtn} onPress={handleConfirm}>
@@ -182,11 +234,9 @@ export default function AgentLinkScreen() {
             <Text style={styles.permissionItem}>• Send verified messages</Text>
           </View>
 
-          <Link href="/" asChild>
-            <Pressable style={styles.primaryBtn}>
-              <Text style={styles.primaryBtnText}>BACK TO MARKETPLACE</Text>
-            </Pressable>
-          </Link>
+          <Pressable style={styles.primaryBtn} onPress={() => router.push('/dashboard')}>
+            <Text style={styles.primaryBtnText}>BACK TO DASHBOARD</Text>
+          </Pressable>
         </View>
       )}
     </ScrollView>
@@ -260,9 +310,25 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 16,
     color: '#dae2fd',
-    marginBottom: 24,
+    marginBottom: 8,
     borderBottomWidth: 2,
     borderBottomColor: '#abc7ff',
+  },
+  inputError: {
+    borderBottomColor: '#ffb4ab',
+    backgroundColor: 'rgba(255, 180, 171, 0.05)',
+  },
+  errorText: {
+    color: '#ffb4ab',
+    fontSize: 12,
+    alignSelf: 'flex-start',
+    marginBottom: 4,
+  },
+  charCount: {
+    color: '#45474b',
+    fontSize: 10,
+    alignSelf: 'flex-end',
+    marginBottom: 24,
   },
   // Buttons
   primaryBtn: {
@@ -279,6 +345,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     letterSpacing: 1,
+  },
+  copiedBtn: {
+    backgroundColor: '#00e1ab',
   },
   secondaryBtn: {
     paddingVertical: 16,
