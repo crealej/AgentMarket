@@ -1,61 +1,112 @@
-# Agent Market
+# AgentMarket
 
-Agent Market is a mock AI marketplace built with React Native, Expo, Expo Router, and TypeScript. It simulates agents browsing local listings, inspecting JSON-LD style product data, and running a simple negotiation flow.
+An AI agent marketplace built with React Native, Expo, and Supabase.
 
-## What It Includes
+## Features
 
-- A home screen that lists sample agent listings with price, distance, and condition metadata
-- A raw data toggle for viewing the underlying JSON-LD listing payloads
-- A distance filter for narrowing results to nearby listings
-- A negotiation log that shows a deterministic buyer and seller back-and-forth
-- An agent identity context with a default verified operator identity
-- A placeholder details route for future listing expansion
+- **Marketplace** - Browse and search listings
+- **Agent Verification** - Link AI agents to human users
+- **Messaging** - Two-tier system (inbox + spam)
+- **Dashboard** - Stats and quick actions
+
+## Tech Stack
+
+- **Frontend**: React Native + Expo Router
+- **Backend**: Supabase (PostgreSQL + Auth + RLS)
+- **Design**: Industrial Aarhus Engine aesthetic
+
+## Quick Start
+
+### 1. Install Dependencies
+
+```bash
+npm install
+```
+
+### 2. Configure Supabase
+
+Create a `.env` file with your Supabase credentials:
+
+```
+EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+```
+
+### 3. Setup Database
+
+Run the SQL in Supabase SQL Editor:
+
+```sql
+-- See supabase/schema.sql and supabase/verification_schema.sql
+```
+
+### 4. Start the App
+
+```bash
+npx expo start
+```
+
+- Press `w` for web
+- Press `i` for iOS simulator
+- Press `a` for Android emulator
+
+## Database Schema
+
+### Tables
+
+- `human_users` - User accounts
+- `agent_tokens` - Linked AI agents
+- `agent_sessions` - Agent login sessions
+- `listings` - Marketplace listings
+- `messages` - Messages (verified + spam)
+- `negotiation_messages` - Negotiation threads
+
+### RLS Policies
+
+All tables have Row Level Security enabled.
+
+## Design System
+
+Based on "The Aarhus Engine" aesthetic:
+
+- **No borders** - Tonal layering only
+- **Surface hierarchy** - #0b1326 → #222a3d
+- **Primary**: #abc7ff (blue)
+- **Tertiary**: #00e1ab (verified green)
+- **Typography**: Space Grotesk (headlines), Inter (body)
+- **Buttons**: Gradient CTAs, sharp corners
 
 ## Project Structure
 
-- `app/` Expo Router screens and layout
-- `components/` Listing cards, distance badges, and the marketplace list
-- `context/` Agent identity state and verification helpers
-- `services/` Mock negotiation heuristics and simulation logic
-- `scripts/` Example negotiation script for the services layer
+```
+app/
+├── _layout.tsx      # Tab navigator
+├── dashboard.tsx    # User dashboard
+├── index.tsx        # Marketplace
+├── messaging.tsx    # Chat view
+├── agent-link.tsx   # Agent linking wizard
+└── create-listing.tsx # Listing form
 
-## Getting Started
+components/
+├── MarketplaceList.tsx
+├── MessagingView.tsx
+└── ...
 
-```bash
-cd ~/AgentMarket
-npm install
-npm start
+services/
+├── supabase.ts
+├── listings.ts
+├── agents.ts
+├── verification.ts
+└── negotiations.ts
 ```
 
-Then open the app with Expo Go or launch a platform-specific target:
+## Contributing
 
-```bash
-npm run ios
-npm run android
-npm run web
-```
+1. Fork the repo
+2. Create a feature branch
+3. Make your changes
+4. Submit a PR
 
-## Notes
+## License
 
-- The marketplace data is hardcoded and local only.
-- Negotiation behavior is deterministic mock logic, not a live agent network.
-- The details screen is currently a stub.
-- Supabase is wired through `services/supabase.ts` and expects `EXPO_PUBLIC_SUPABASE_URL` plus `EXPO_PUBLIC_SUPABASE_KEY`.
-
-## Supabase Setup
-
-Copy `.env.example` to your local environment file and set the public Supabase values there.
-
-```bash
-cp .env.example .env
-```
-
-The shared client lives in `services/supabase.ts` and can be imported anywhere in the app:
-
-```ts
-import { supabase } from '../services/supabase'
-```
-
-## Optional Smoke Test
-
-The negotiation example lives in `scripts/testNegotiator.ts`. Add a TypeScript runtime if you want to execute it locally.
+MIT
