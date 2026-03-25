@@ -6,36 +6,28 @@ import {
   ScrollView,
   Pressable,
   TextInput,
+  Alert,
 } from 'react-native'
 import { useRouter } from 'expo-router'
-import { supabase } from '../services/supabase'
+import { getListingsAPI, createListingAPI, processAgentCommand } from '../services/api'
 import { formatPrice, formatDistance } from '../utils/helpers'
 
-/**
- * Agent API View - Optimized for AI agent navigation
- * 
- * This screen provides a machine-readable interface for agents to:
- * - Browse listings in a structured format
- * - Quick action buttons for common tasks
- * - Direct API-style data display
- * - One-tap negotiation initiation
- */
-
-interface QuickListing {
+interface Listing {
   id: string
   title: string
   price: number
   distance_km: number
-  condition: number
-  seller_id: string
+  condition_rating: number
+  specifications: any
 }
 
 export default function AgentApiScreen() {
   const router = useRouter()
-  const [listings, setListings] = useState<QuickListing[]>([])
+  const [listings, setListings] = useState<Listing[]>([])
   const [loading, setLoading] = useState(true)
   const [jsonView, setJsonView] = useState(true)
   const [commandInput, setCommandInput] = useState('')
+  const [lastResponse, setLastResponse] = useState<any>(null)
 
   useEffect(() => {
     fetchListings()
@@ -43,65 +35,66 @@ export default function AgentApiScreen() {
 
   async function fetchListings() {
     setLoading(true)
-    try {
-      if (!supabase) {
-        setListings([
-          { id: 'lst_001', title: 'Industrial GPU Node V2', price: 2500, distance_km: 12, condition: 0.92, seller_id: 'sel_001' },
-          { id: 'lst_002', title: 'Neural Mesh Controller', price: 1800, distance_km: 8, condition: 0.85, seller_id: 'sel_002' },
-          { id: 'lst_003', title: 'Quantum Processing Unit', price: 5000, distance_km: 25, condition: 0.78, seller_id: 'sel_003' },
-        ])
-      } else {
-        const { data } = await supabase
-          .from('listings')
-          .select('id, title, price, distance_km, condition_rating, seller_id')
-          .limit(20)
-        setListings(data || [])
+    const response = await getListingsAPI({ limit: 20 })
+    if (response.success && response.data) {
+      setListings(response.data)
+    }
+    setLoading(false)
+  }
+
+  async function handleCommandSubmit() {
+    if (!commandInput.trim()) return
+
+    const result = await processAgentCommand(commandInput)
+    setLastResponse(result)
+
+    if (result.success && result.data) {
+      const { action, query, target } = result.data as any
+      if (action === 'search') {
+        router.push('/search')
+      } else if (action === 'open' && target) {
+        // Find listing by partial ID or title
+        const found = listings.find(l =>
+          l.id.includes(target) || l.title.toLowerCase().includes(target.toLowerCase())
+        )
+        if (found) {
+          router.push(`/listing/${found.id}`)
+        } else {
+          Alert.alert('Not found', `No listing matching "${target}"`)
+        }
       }
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
+    } else if (!result.success) {
+      Alert.alert('Command failed', result.error || 'Unknown error')
     }
-  }
 
-  function handleQuickAction(action: string, listingId?: string) {
-    switch (action) {
-      case 'negotiate':
-        if (listingId) router.push(`/listing/${listingId}`)
-        break
-      case 'message':
-        router.push('/messaging')
-        break
-      case 'refresh':
-        fetchListings()
-        break
-      case 'create':
-        router.push('/create-listing')
-        break
-    }
-  }
-
-  function handleCommandSubmit() {
-    // Parse natural language commands
-    const cmd = commandInput.toLowerCase().trim()
-    
-    if (cmd.includes('find') || cmd.includes('search')) {
-      router.push('/search')
-    } else if (cmd.includes('create') || cmd.includes('new listing')) {
-      router.push('/create-listing')
-    } else if (cmd.includes('message') || cmd.includes('chat')) {
-      router.push('/messaging')
-    } else if (cmd.includes('settings')) {
-      router.push('/settings')
-    } else if (cmd.startsWith('open ') && listings.length > 0) {
-      const searchTerm = cmd.replace('open ', '')
-      const found = listings.find(l => 
-        l.title.toLowerCase().includes(searchTerm) || l.id.includes(searchTerm)
-      )
-      if (found) router.push(`/listing/${found.id}`)
-    }
-    
     setCommandInput('')
+  }
+
+  async function handleQuickCreate() {
+    Alert.prompt(
+      'Quick Create Listing',
+      'Enter listing title:',
+      async (title) => {
+        if (!title || title.length < 5) {
+          Alert.alert('Error', 'Title must be at least 5 characters')
+          return
+        }
+
+        const result = await createListingAPI({
+          title,
+          price: 100,
+          distance_km: 10,
+          condition_rating: 0.8,
+        })
+
+        if (result.success && result.data) {
+          Alert.alert('Success', `Created: ${result.data.title} (${result.data.id.slice(0, 8)})`)
+          fetchListings()
+        } else {
+          Alert.alert('Error', result.error || 'Failed to create listing')
+        }
+      }
+    )
   }
 
   return (
@@ -127,15 +120,15 @@ export default function AgentApiScreen() {
 
       {/* Quick Actions */}
       <View style={styles.quickActions}>
-        <Pressable style={styles.actionBtn} onPress={() => handleQuickAction('refresh')}>
+        <Pressable style={styles.actionBtn} onPress={fetchListings}>
           <Text style={styles.actionIcon}>🔄</Text>
           <Text style={styles.actionLabel}>REFRESH</Text>
         </Pressable>
-        <Pressable style={styles.actionBtn} onPress={() => handleQuickAction('message')}>
+        <Pressable style={styles.actionBtn} onPress={() => router.push('/messaging')}>
           <Text style={styles.actionIcon}>💬</Text>
           <Text style={styles.actionLabel}>MESSAGE</Text>
         </Pressable>
-        <Pressable style={styles.actionBtn} onPress={() => handleQuickAction('create')}>
+        <Pressable style={styles.actionBtn} onPress={() => router.push('/create-listing')}>
           <Text style={styles.actionIcon}>➕</Text>
           <Text style={styles.actionLabel}>CREATE</Text>
         </Pressable>
@@ -149,7 +142,7 @@ export default function AgentApiScreen() {
             style={styles.commandInput}
             value={commandInput}
             onChangeText={setCommandInput}
-            placeholder="find gpu, open lst_001, message..."
+            placeholder="find gpu, open sock, message..."
             placeholderTextColor="#45474b"
             onSubmitEditing={handleCommandSubmit}
             autoCapitalize="none"
@@ -159,21 +152,30 @@ export default function AgentApiScreen() {
             <Text style={styles.commandBtnText}>→</Text>
           </Pressable>
         </View>
+        {lastResponse && (
+          <View style={styles.responseBox}>
+            <Text style={styles.responseText}>
+              {JSON.stringify(lastResponse, null, 2)}
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Listings */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>LISTINGS ({listings.length})</Text>
-        
-        {jsonView ? (
-          // JSON View - Machine readable
+        <Text style={styles.sectionTitle}>
+          LISTINGS ({listings.length})
+        </Text>
+
+        {loading ? (
+          <Text style={styles.loadingText}>Loading...</Text>
+        ) : jsonView ? (
           <View style={styles.jsonContainer}>
             <Text style={styles.jsonText}>
               {JSON.stringify(listings, null, 2)}
             </Text>
           </View>
         ) : (
-          // Card View - Human readable
           listings.map((listing) => (
             <Pressable
               key={listing.id}
@@ -181,7 +183,7 @@ export default function AgentApiScreen() {
               onPress={() => router.push(`/listing/${listing.id}`)}
             >
               <View style={styles.listingHeader}>
-                <Text style={styles.listingId}>{listing.id}</Text>
+                <Text style={styles.listingId}>{listing.id.slice(0, 8)}</Text>
                 <Text style={styles.listingPrice}>
                   {formatPrice(listing.price)}
                 </Text>
@@ -192,7 +194,7 @@ export default function AgentApiScreen() {
                   📍 {formatDistance(listing.distance_km)}
                 </Text>
                 <Text style={styles.metaText}>
-                  ⚡ {Math.round(listing.condition * 100)}%
+                  ⚡ {Math.round(listing.condition_rating * 100)}%
                 </Text>
               </View>
               <Pressable
@@ -206,25 +208,25 @@ export default function AgentApiScreen() {
         )}
       </View>
 
-      {/* API Endpoints Reference */}
+      {/* API Endpoints */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>ENDPOINTS</Text>
+        <Text style={styles.sectionTitle}>API ENDPOINTS</Text>
         <View style={styles.endpointList}>
           <View style={styles.endpoint}>
             <Text style={styles.endpointMethod}>GET</Text>
-            <Text style={styles.endpointPath}>/listings</Text>
-          </View>
-          <View style={styles.endpoint}>
-            <Text style={styles.endpointMethod}>GET</Text>
-            <Text style={styles.endpointPath}>/listing/:id</Text>
+            <Text style={styles.endpointPath}>getListingsAPI()</Text>
           </View>
           <View style={styles.endpoint}>
             <Text style={styles.endpointMethod}>POST</Text>
-            <Text style={styles.endpointPath}>/negotiate/:id</Text>
+            <Text style={styles.endpointPath}>createListingAPI()</Text>
           </View>
           <View style={styles.endpoint}>
             <Text style={styles.endpointMethod}>POST</Text>
-            <Text style={styles.endpointPath}>/message</Text>
+            <Text style={styles.endpointPath}>sendMessageAPI()</Text>
+          </View>
+          <View style={styles.endpoint}>
+            <Text style={styles.endpointMethod}>CMD</Text>
+            <Text style={styles.endpointPath}>processAgentCommand()</Text>
           </View>
         </View>
       </View>
@@ -346,6 +348,21 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#002f65',
     fontWeight: '700',
+  },
+  responseBox: {
+    marginTop: 8,
+    backgroundColor: '#131b2e',
+    padding: 12,
+    borderRadius: 4,
+  },
+  responseText: {
+    fontFamily: 'monospace',
+    fontSize: 11,
+    color: '#8f9095',
+  },
+  loadingText: {
+    color: '#8f9095',
+    fontSize: 12,
   },
   section: {
     marginBottom: 24,
