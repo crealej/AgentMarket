@@ -34,6 +34,13 @@ export default function RootLayout() {
           }}
         />
         <Tabs.Screen
+          name="agent-api"
+          options={{
+            title: 'Agent API',
+            tabBarIcon: () => <Text>🤖</Text>
+          }}
+        />
+        <Tabs.Screen
           name="messaging"
           options={{
             title: 'Messages',
@@ -41,17 +48,10 @@ export default function RootLayout() {
           }}
         />
         <Tabs.Screen
-          name="agent-link"
+          name="profile"
           options={{
-            title: 'Link Agent',
-            tabBarIcon: () => <Text>🤖</Text>
-          }}
-        />
-        <Tabs.Screen
-          name="create-listing"
-          options={{
-            title: 'Create',
-            tabBarIcon: () => <Text>➕</Text>
+            title: 'Profile',
+            tabBarIcon: () => <Text>👤</Text>
           }}
         />
         <Tabs.Screen
@@ -59,6 +59,37 @@ export default function RootLayout() {
           options={{
             title: 'Settings',
             tabBarIcon: () => <Text>⚙️</Text>
+          }}
+        />
+        {/* Hidden screens */}
+        <Tabs.Screen
+          name="search"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="notifications"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="agent-link"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="create-listing"
+          options={{
+            href: null,
+          }}
+        />
+        <Tabs.Screen
+          name="onboarding"
+          options={{
+            href: null,
           }}
         />
       </Tabs>
