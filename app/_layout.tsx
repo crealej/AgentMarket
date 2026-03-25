@@ -54,6 +54,13 @@ export default function RootLayout() {
             tabBarIcon: () => <Text>➕</Text>
           }}
         />
+        <Tabs.Screen
+          name="settings"
+          options={{
+            title: 'Settings',
+            tabBarIcon: () => <Text>⚙️</Text>
+          }}
+        />
       </Tabs>
     </ErrorBoundary>
   )

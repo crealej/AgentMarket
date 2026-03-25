@@ -1,0 +1,403 @@
+import React, { useState, useEffect } from 'react'
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  ActivityIndicator,
+} from 'react-native'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import { supabase } from '../../services/supabase'
+import { simulateNegotiation } from '../../services/agentNegotiator'
+
+interface Listing {
+  id: string
+  title: string
+  price: number
+  distance_km: number
+  specifications: any
+  condition_rating: number
+  negotiation_logic: any
+  created_at: string
+}
+
+export default function ListingDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>()
+  const router = useRouter()
+  const [listing, setListing] = useState<Listing | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [negotiating, setNegotiating] = useState(false)
+  const [negotiationLog, setNegotiationLog] = useState<any[]>([])
+
+  useEffect(() => {
+    fetchListing()
+  }, [id])
+
+  async function fetchListing() {
+    setLoading(true)
+    try {
+      if (!supabase) {
+        // Mock data
+        setListing({
+          id: id || '1',
+          title: 'Industrial GPU Node V2',
+          price: 2500,
+          distance_km: 12,
+          specifications: { cores: 8, memory: '16GB' },
+          condition_rating: 0.92,
+          negotiation_logic: { min_price: 2000 },
+          created_at: new Date().toISOString(),
+        })
+        setLoading(false)
+        return
+      }
+
+      const { data } = await supabase
+        .from('listings')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      setListing(data)
+    } catch (err) {
+      console.error('Error fetching listing:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function handleNegotiate() {
+    if (!listing) return
+    setNegotiating(true)
+
+    setTimeout(() => {
+      const jsonld = {
+        '@context': 'https://schema.org',
+        '@type': 'Product',
+        id: listing.id,
+        name: listing.title,
+        price: listing.price,
+        location: { km: listing.distance_km },
+        ai: {
+          specifications: listing.specifications || {},
+          condition_rating: listing.condition_rating,
+          negotiation_logic: listing.negotiation_logic,
+        },
+      }
+
+      const log = simulateNegotiation(jsonld)
+      setNegotiationLog(log)
+      setNegotiating(false)
+    }, 1500)
+  }
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#abc7ff" />
+        <Text style={styles.loadingText}>Loading listing...</Text>
+      </View>
+    )
+  }
+
+  if (!listing) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorIcon}>⚠️</Text>
+        <Text style={styles.errorText}>Listing not found</Text>
+        <Pressable style={styles.backBtn} onPress={() => router.back()}>
+          <Text style={styles.backBtnText}>GO BACK</Text>
+        </Pressable>
+      </View>
+    )
+  }
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Text style={styles.backIcon}>←</Text>
+        </Pressable>
+        <Text style={styles.headerTitle}>LISTING DETAILS</Text>
+        <View style={styles.placeholder} />
+      </View>
+
+      {/* Title */}
+      <Text style={styles.title}>{listing.title}</Text>
+
+      {/* Price */}
+      <View style={styles.priceRow}>
+        <Text style={styles.priceLabel}>PRICE</Text>
+        <Text style={styles.priceValue}>{listing.price} DKK</Text>
+      </View>
+
+      {/* Info Cards */}
+      <View style={styles.infoGrid}>
+        <View style={styles.infoCard}>
+          <Text style={styles.infoLabel}>DISTANCE</Text>
+          <Text style={styles.infoValue}>{listing.distance_km} km</Text>
+        </View>
+        <View style={styles.infoCard}>
+          <Text style={styles.infoLabel}>CONDITION</Text>
+          <Text style={styles.infoValue}>
+            {Math.round(listing.condition_rating * 100)}%
+          </Text>
+        </View>
+      </View>
+
+      {/* Specifications */}
+      {listing.specifications && Object.keys(listing.specifications).length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>SPECIFICATIONS</Text>
+          {Object.entries(listing.specifications).map(([key, value]) => (
+            <View key={key} style={styles.specRow}>
+              <Text style={styles.specKey}>{key.toUpperCase()}</Text>
+              <Text style={styles.specValue}>{String(value)}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Negotiation */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>AGENT NEGOTIATION</Text>
+
+        <Pressable
+          style={[styles.negotiateBtn, negotiating && styles.negotiateBtnDisabled]}
+          onPress={handleNegotiate}
+          disabled={negotiating}
+        >
+          {negotiating ? (
+            <ActivityIndicator size="small" color="#002f65" />
+          ) : (
+            <Text style={styles.negotiateBtnText}>START NEGOTIATION</Text>
+          )}
+        </Pressable>
+
+        {negotiationLog.length > 0 && (
+          <View style={styles.logContainer}>
+            {negotiationLog.map((entry, idx) => (
+              <View key={idx} style={styles.logRow}>
+                <Text style={[styles.logActor, entry.actor === 'AgentBuyer' && styles.logBuyer]}>
+                  {entry.actor.replace('Agent', '')}:
+                </Text>
+                <Text style={styles.logMessage}>{entry.message}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+
+      {/* Actions */}
+      <View style={styles.actions}>
+        <Pressable style={styles.secondaryBtn}>
+          <Text style={styles.secondaryBtnText}>MESSAGE SELLER</Text>
+        </Pressable>
+        <Pressable style={styles.primaryBtn}>
+          <Text style={styles.primaryBtnText}>BUY NOW</Text>
+        </Pressable>
+      </View>
+    </ScrollView>
+  )
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0b1326',
+  },
+  content: {
+    padding: 20,
+    paddingBottom: 100,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0b1326',
+  },
+  loadingText: {
+    color: '#abc7ff',
+    marginTop: 12,
+    fontSize: 12,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0b1326',
+  },
+  errorIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#8f9095',
+    marginBottom: 24,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+    paddingTop: 40,
+  },
+  backBtn: {
+    padding: 8,
+  },
+  backIcon: {
+    fontSize: 24,
+    color: '#abc7ff',
+  },
+  headerTitle: {
+    fontSize: 12,
+    color: '#8f9095',
+    letterSpacing: 2,
+  },
+  placeholder: {
+    width: 40,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#dae2fd',
+    marginBottom: 24,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginBottom: 24,
+  },
+  priceLabel: {
+    fontSize: 10,
+    color: '#45474b',
+    letterSpacing: 2,
+  },
+  priceValue: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#abc7ff',
+  },
+  infoGrid: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 32,
+  },
+  infoCard: {
+    flex: 1,
+    backgroundColor: '#131b2e',
+    padding: 16,
+    borderLeftWidth: 2,
+    borderLeftColor: '#222a3d',
+  },
+  infoLabel: {
+    fontSize: 10,
+    color: '#45474b',
+    letterSpacing: 2,
+    marginBottom: 8,
+  },
+  infoValue: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#dae2fd',
+  },
+  section: {
+    marginBottom: 32,
+  },
+  sectionTitle: {
+    fontSize: 10,
+    color: '#45474b',
+    letterSpacing: 2,
+    marginBottom: 12,
+  },
+  specRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#222a3d',
+  },
+  specKey: {
+    fontSize: 12,
+    color: '#8f9095',
+    letterSpacing: 1,
+  },
+  specValue: {
+    fontSize: 14,
+    color: '#dae2fd',
+    fontWeight: '600',
+  },
+  negotiateBtn: {
+    backgroundColor: '#abc7ff',
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderRadius: 4,
+  },
+  negotiateBtnDisabled: {
+    backgroundColor: '#222a3d',
+  },
+  negotiateBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#002f65',
+    letterSpacing: 1,
+  },
+  logContainer: {
+    marginTop: 16,
+    backgroundColor: '#131b2e',
+    padding: 12,
+  },
+  logRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  logActor: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#00e1ab',
+    width: 70,
+  },
+  logBuyer: {
+    color: '#abc7ff',
+  },
+  logMessage: {
+    fontSize: 12,
+    color: '#dae2fd',
+    flex: 1,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+  secondaryBtn: {
+    flex: 1,
+    paddingVertical: 16,
+    alignItems: 'center',
+    backgroundColor: '#131b2e',
+    borderRadius: 4,
+  },
+  secondaryBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#abc7ff',
+    letterSpacing: 1,
+  },
+  primaryBtn: {
+    flex: 1,
+    paddingVertical: 16,
+    alignItems: 'center',
+    backgroundColor: '#00e1ab',
+    borderRadius: 4,
+  },
+  primaryBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#002f65',
+    letterSpacing: 1,
+  },
+})
