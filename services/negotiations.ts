@@ -1,6 +1,12 @@
 import { supabase, isSupabaseConfigured } from './supabase'
 import { simulateNegotiation } from './agentNegotiator'
 
+export interface NegotiationLogEntry {
+  actor: string
+  message: string
+  timestamp: string
+}
+
 export interface NegotiationMessage {
   id: string
   listing_id: string
@@ -108,7 +114,7 @@ export async function getNegotiationMessages(listingId: string): Promise<Negotia
  * Run simulated negotiation for a listing
  * This uses the existing mock negotiation logic
  */
-export function runSimulatedNegotiation(listingJsonLd: any): NegotiationMessage[] {
+export function runSimulatedNegotiation(listingJsonLd: any): NegotiationLogEntry[] {
   return simulateNegotiation(listingJsonLd)
 }
 
