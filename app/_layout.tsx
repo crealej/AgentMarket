@@ -17,7 +17,6 @@ export default function RootLayout() {
           },
           tabBarActiveTintColor: '#abc7ff',
           tabBarInactiveTintColor: '#45474b',
-          contentStyle: { backgroundColor: '#0b1326' },
         }}
       >
         <Tabs.Screen
