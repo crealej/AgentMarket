@@ -164,7 +164,7 @@ function getMockListings(): Listing[] {
       distance_km: 0.5,
       specifications: {
         material: 'cotton',
-        size: 'EU 42',
+        size: 'EU 42-46',
         color: 'white (now gray)',
         usage_hours: '48',
         odor_level: 'medium',

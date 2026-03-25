@@ -10,7 +10,7 @@ export const MOCK_LISTINGS: Listing[] = [
     condition_rating: 0.85,
     specifications: {
       material: 'cotton',
-      size: 'EU 42',
+      size: 'EU 42-46',
       color: 'white (now gray)',
       usage_hours: '48',
       odor_level: 'medium',
