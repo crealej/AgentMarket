@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router'
+import { Text } from 'react-native'
 import ErrorBoundary from '../components/ErrorBoundary'
 
 export default function RootLayout() {
@@ -23,35 +24,35 @@ export default function RootLayout() {
           name="dashboard"
           options={{
             title: 'Dashboard',
-            tabBarIcon: ({ color }) => <Text style={{ color }}>📊</Text>
+            tabBarIcon: () => <Text>📊</Text>
           }}
         />
         <Tabs.Screen
           name="index"
           options={{
             title: 'Marketplace',
-            tabBarIcon: ({ color }) => <Text style={{ color }}>🏪</Text>
+            tabBarIcon: () => <Text>🏪</Text>
           }}
         />
         <Tabs.Screen
           name="messaging"
           options={{
             title: 'Messages',
-            tabBarIcon: ({ color }) => <Text style={{ color }}>💬</Text>
+            tabBarIcon: () => <Text>💬</Text>
           }}
         />
         <Tabs.Screen
           name="agent-link"
           options={{
             title: 'Link Agent',
-            tabBarIcon: ({ color }) => <Text style={{ color }}>🤖</Text>
+            tabBarIcon: () => <Text>🤖</Text>
           }}
         />
         <Tabs.Screen
           name="create-listing"
           options={{
             title: 'Create',
-            tabBarIcon: ({ color }) => <Text style={{ color }}>➕</Text>
+            tabBarIcon: () => <Text>➕</Text>
           }}
         />
       </Tabs>
