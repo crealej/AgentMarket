@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native'
 import { useRouter } from 'expo-router'
-import { getListingsAPI, createListingAPI, processAgentCommand } from '../services/api'
+import { getListingsAPI, createListingAPI, deleteListingAPI, processAgentCommand } from '../services/api'
 import { formatPrice, formatDistance } from '../utils/helpers'
 
 interface Listing {
@@ -94,6 +94,29 @@ export default function AgentApiScreen() {
           Alert.alert('Error', result.error || 'Failed to create listing')
         }
       }
+    )
+  }
+
+  async function handleDeleteListing(listingId: string, title: string) {
+    Alert.alert(
+      'Delete Listing',
+      `Delete "${title}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const result = await deleteListingAPI(listingId)
+            if (result.success) {
+              Alert.alert('Deleted', `Listing ${listingId.slice(0, 8)} removed`)
+              fetchListings()
+            } else {
+              Alert.alert('Error', result.error || 'Failed to delete')
+            }
+          },
+        },
+      ]
     )
   }
 
@@ -203,7 +226,14 @@ export default function AgentApiScreen() {
               >
                 <Text style={styles.negotiateBtnText}>NEGOTIATE →</Text>
               </Pressable>
-            </Pressable>
+              <Pressable
+                style={styles.deleteBtn}
+                onPress={() => handleDeleteListing(listing.id, listing.title)}
+              >
+                <Text style={styles.deleteBtnText}>🗑️</Text>
+              </Pressable>
+            </View>
+          </Pressable>
           ))
         )}
       </View>
@@ -418,6 +448,7 @@ const styles = StyleSheet.create({
     color: '#8f9095',
   },
   negotiateBtn: {
+    flex: 1,
     backgroundColor: '#abc7ff',
     paddingVertical: 10,
     alignItems: 'center',
@@ -428,6 +459,21 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#002f65',
     letterSpacing: 1,
+  },
+  listingActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
+  deleteBtn: {
+    backgroundColor: '#ff6b6b',
+    width: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 4,
+  },
+  deleteBtnText: {
+    fontSize: 16,
   },
   endpointList: {
     backgroundColor: '#131b2e',

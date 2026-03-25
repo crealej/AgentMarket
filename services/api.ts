@@ -172,6 +172,96 @@ export async function getListingsAPI(filters?: {
 }
 
 /**
+ * Delete a listing via API
+ */
+export async function deleteListingAPI(listingId: string): Promise<ApiResponse<{ id: string }>> {
+  if (!isSupabaseConfigured || !supabase) {
+    return { success: false, error: 'Supabase not configured' }
+  }
+
+  if (!listingId) {
+    return { success: false, error: 'Listing ID is required' }
+  }
+
+  try {
+    // First check if listing exists
+    const { data: existing, error: checkError } = await supabase
+      .from('listings')
+      .select('id')
+      .eq('id', listingId)
+      .single()
+
+    if (checkError || !existing) {
+      return { success: false, error: 'Listing not found' }
+    }
+
+    // Delete the listing
+    const { error: deleteError } = await supabase
+      .from('listings')
+      .delete()
+      .eq('id', listingId)
+
+    if (deleteError) {
+      return { success: false, error: deleteError.message }
+    }
+
+    return { success: true, data: { id: listingId } }
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Unknown error',
+    }
+  }
+}
+
+/**
+ * Update a listing via API
+ */
+export async function updateListingAPI(
+  listingId: string,
+  updates: {
+    title?: string
+    description?: string
+    price?: number
+    distance_km?: number
+    condition_rating?: number
+    specifications?: Record<string, any>
+    status?: 'active' | 'sold' | 'pending'
+  }
+): Promise<ApiResponse<{ id: string; title: string }>> {
+  if (!isSupabaseConfigured || !supabase) {
+    return { success: false, error: 'Supabase not configured' }
+  }
+
+  if (!listingId) {
+    return { success: false, error: 'Listing ID is required' }
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('listings')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', listingId)
+      .select()
+      .single()
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, data: { id: data.id, title: data.title } }
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Unknown error',
+    }
+  }
+}
+
+/**
  * Process natural language commands from AI agents
  */
 export async function processAgentCommand(command: string): Promise<ApiResponse<any>> {
