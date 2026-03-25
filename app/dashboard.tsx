@@ -52,7 +52,7 @@ export default function DashboardScreen() {
 
   async function fetchDashboardData() {
     setLoading(true)
-    
+
     if (!supabase) {
       // Mock data for demo
       setLinkedAgents([
@@ -68,18 +68,15 @@ export default function DashboardScreen() {
     }
 
     try {
-      // Fetch linked agents
       const { data: agents } = await supabase
         .from('agent_tokens')
         .select('id, agent_name, agent_id, verified, created_at')
 
-      // Fetch user listings
       const { data: listings } = await supabase
         .from('listings')
         .select('id, title, status, price, created_at')
         .limit(5)
 
-      // Fetch message counts
       const { data: msgData } = await supabase
         .from('messages')
         .select('spam_flag')
@@ -98,8 +95,28 @@ export default function DashboardScreen() {
     }
   }
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#abc7ff" />
+        <Text style={styles.loadingText}>Loading dashboard...</Text>
+      </View>
+    )
+  }
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor="#abc7ff"
+          colors={['#abc7ff']}
+        />
+      }
+    >
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.avatarPlaceholder}>
@@ -150,6 +167,7 @@ export default function DashboardScreen() {
 
         {linkedAgents.length === 0 ? (
           <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>🤖</Text>
             <Text style={styles.emptyText}>No agents linked yet</Text>
           </View>
         ) : (
@@ -182,6 +200,7 @@ export default function DashboardScreen() {
 
         {userListings.length === 0 ? (
           <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>📦</Text>
             <Text style={styles.emptyText}>No listings yet</Text>
           </View>
         ) : (
@@ -191,15 +210,19 @@ export default function DashboardScreen() {
                 <Text style={styles.listingTitle}>{listing.title}</Text>
                 <Text style={styles.listingPrice}>${listing.price.toLocaleString()}</Text>
               </View>
-              <View style={[
-                styles.statusTag,
-                listing.status === 'active' && styles.statusTagActive,
-                listing.status === 'pending' && styles.statusTagPending,
-              ]}>
-                <Text style={[
-                  styles.statusTagText,
-                  listing.status === 'active' && styles.statusTagTextActive,
-                ]}>
+              <View
+                style={[
+                  styles.statusTag,
+                  listing.status === 'active' && styles.statusTagActive,
+                  listing.status === 'pending' && styles.statusTagPending,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.statusTagText,
+                    listing.status === 'active' && styles.statusTagTextActive,
+                  ]}
+                >
                   {listing.status.toUpperCase()}
                 </Text>
               </View>
@@ -244,7 +267,17 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 100,
   },
-  // Header
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0b1326',
+  },
+  loadingText: {
+    color: '#abc7ff',
+    marginTop: 12,
+    fontSize: 14,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -292,10 +325,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: '#00e1ab',
     marginRight: 8,
-    shadowColor: '#00e1ab',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
   },
   statusText: {
     fontSize: 10,
@@ -303,7 +332,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 1,
   },
-  // Stats Grid
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -335,7 +363,6 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     marginTop: 4,
   },
-  // Sections
   section: {
     marginBottom: 24,
   },
@@ -361,11 +388,14 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: 'center',
   },
+  emptyIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
   emptyText: {
     color: '#8f9095',
     fontSize: 14,
   },
-  // Agent Item
   agentItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -388,7 +418,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#8f9095',
     marginTop: 4,
-    fontFamily: 'monospace',
   },
   verifiedBadge: {
     backgroundColor: 'rgba(0, 225, 171, 0.1)',
@@ -402,7 +431,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 1,
   },
-  // Listing Item
   listingItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -445,7 +473,6 @@ const styles = StyleSheet.create({
   statusTagTextActive: {
     color: '#00e1ab',
   },
-  // Quick Actions
   quickActions: {
     flexDirection: 'row',
     justifyContent: 'space-around',
