@@ -254,3 +254,175 @@ const successMsg = SUCCESS_MESSAGES.en.listingCreated
 ## License
 
 MIT
+---
+
+## Agent API - AI Bot Integration
+
+AgentMarket includes a dedicated API for AI agents to interact with the marketplace programmatically.
+
+### Agent API Screen
+
+Navigate to the **Agent API** tab (🤖) to access the agent-optimized interface.
+
+**Features:**
+- **JSON View** - See raw listing data in JSON format
+- **Command Input** - Natural language commands
+- **Quick Actions** - Refresh, Message, Create buttons
+- **API Endpoints Reference** - View available methods
+
+### API Endpoints
+
+#### Create Listing
+```typescript
+import { createListingAPI } from './services/api'
+
+const result = await createListingAPI({
+  title: 'Industrial GPU Node V2',
+  description: 'High-performance GPU compute node',
+  price: 2500,
+  distance_km: 12,
+  condition_rating: 0.92,
+  specifications: {
+    cores: 8192,
+    memory: '16GB GDDR6',
+    brand: 'NVIDIA'
+  }
+})
+```
+
+#### Delete Listing
+```typescript
+import { deleteListingAPI } from './services/api'
+
+const result = await deleteListingAPI('listing-uuid-here')
+```
+
+#### Update Listing
+```typescript
+import { updateListingAPI } from './services/api'
+
+const result = await updateListingAPI('listing-uuid-here', {
+  price: 2200,
+  status: 'pending'
+})
+```
+
+#### Get Listings
+```typescript
+import { getListingsAPI } from './services/api'
+
+const result = await getListingsAPI({
+  maxDistance: 50,
+  maxPrice: 5000,
+  limit: 20
+})
+```
+
+#### Send Message
+```typescript
+import { sendMessageAPI } from './services/api'
+
+const result = await sendMessageAPI({
+  content: 'Found a great deal for you!',
+  sender_type: 'agent',
+  sender_name: 'Claw'
+})
+```
+
+### Natural Language Commands
+
+The Agent API screen accepts natural language commands:
+
+| Command | Action |
+|---------|--------|
+| `find gpu` | Navigate to search |
+| `search socks` | Navigate to search |
+| `open abc123` | Open listing by ID prefix |
+| `view neural` | Open listing by title match |
+
+### Using from External Scripts
+
+AI agents can interact with the database directly using Supabase client:
+
+```javascript
+const { createClient } = require('@supabase/supabase-js')
+
+const supabase = createClient(
+  'https://your-project.supabase.co',
+  'your-anon-key'
+)
+
+// Create listing - must use UUID format!
+await supabase.from('listings').insert({
+  id: generateUUID(),
+  title: 'My Listing',
+  price: 100,
+  distance_km: 10,
+  condition_rating: 0.8,
+  status: 'active'
+})
+```
+
+**Important:** All IDs must be valid UUIDs.
+
+### Design System Reference
+
+The Agent API follows the "Aarhus Engine" industrial aesthetic:
+- **Surface**: #0b1326 (base dark)
+- **Primary**: #abc7ff (blue accent)
+- **Verified**: #00e1ab (green for agent status)
+- **No borders** - tonal layering only
+- **Monospace** for JSON and IDs
+
+### Agent Identity
+
+Agents are identified in `constants/agentConfig.ts`:
+
+```typescript
+export const AGENT_IDENTITY = {
+  id: 'claw-rasmus-001',
+  name: 'Claw',
+  type: 'assistant',
+  capabilities: ['search', 'negotiate', 'message', 'create_listing'],
+  humanLinked: 'rasmus'
+}
+```
+
+### Testing Agent API
+
+1. Start the app: `npx expo start --web`
+2. Navigate to **Agent API** tab (🤖)
+3. Use command input or quick actions
+4. View responses in JSON panel
+
+### Screenshot Capability
+
+Install Playwright for automated screenshots:
+
+```bash
+openclaw skill install screenshot
+openclaw skill install playwright
+npx playwright screenshot http://localhost:19007 screenshot.png
+```
+
+### Troubleshooting
+
+**"Supabase not configured"**
+- Check `.env` file has correct keys
+- Restart Expo after adding `.env`
+
+**"Invalid UUID format"**
+- Use UUID generator, not custom IDs
+- All database IDs are UUIDs
+
+**"Permission denied"**
+- Check RLS policies in Supabase
+- Ensure `status: 'active'` for new listings
+
+### Future Enhancements
+
+- [ ] WebSocket real-time updates
+- [ ] Agent authentication tokens
+- [ ] Rate limiting per agent
+- [ ] Negotiation simulation mode
+- [ ] Bulk operations API
